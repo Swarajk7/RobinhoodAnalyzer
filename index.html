@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robinhood Portfolio Analyzer</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+    <div class="app-container">
+        <!-- Header / Controls -->
+        <header class="main-header">
+            <div class="logo-area">
+                <h1>Portfolio<span class="highlight">Analyzer</span></h1>
+                <p class="subtitle">Deep dive into your Robinhood returns</p>
+            </div>
+
+            <div class="controls-area">
+                <div class="control-group">
+                    <label for="csvFileInput" class="file-upload-btn">
+                        Upload CSV
+                        <input type="file" id="csvFileInput" accept=".csv" />
+                    </label>
+                    <span id="fileNameDisplay" class="file-name">No file chosen</span>
+                    <a href="https://support.portseido.com/export-trades/robinhood/#:~:text=Log%20in%20to%20your%20Robinhood,Next%20Saxo"
+                        target="_blank" class="help-link">How to get this CSV?</a>
+                </div>
+
+                <div class="control-group">
+                    <button id="fetchPricesBtn" class="action-btn">Fetch Live Prices</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard (Hidden until data loaded) -->
+        <main id="dashboard" class="hidden">
+
+            <!-- Key Metrics -->
+            <section class="metrics-grid">
+                <div class="metric-card">
+                    <h3>Total Invested (Cost Basis)</h3>
+                    <div class="metric-value" id="totalCostBasis">--</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Current Value</h3>
+                    <div class="metric-value" id="currentValue">--</div>
+                    <div class="metric-sub" id="unrealizedPl">--</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Total Dividends</h3>
+                    <div class="metric-value dividend-text" id="totalDividends">--</div>
+                </div>
+            </section>
+
+            <!-- Charts Section 1: Composition & Dividends -->
+            <section class="charts-row">
+                <div class="chart-card half-width">
+                    <h3>Portfolio Composition</h3>
+                    <canvas id="compositionChart"></canvas>
+                </div>
+                <div class="chart-card half-width">
+                    <h3>Dividend Snowball (Quarterly)</h3>
+                    <canvas id="dividendChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Vintage Analysis -->
+            <section class="full-width-section">
+                <div class="section-header">
+                    <h2>Vintage Analysis</h2>
+                    <p>Track performance by the year you invested the money (FIFO Method).</p>
+                </div>
+                <div class="chart-card full-width">
+                    <canvas id="vintageChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Holdings Performance Table -->
+            <section class="full-width-section">
+                <div class="section-header">
+                    <h2>Holdings Performance</h2>
+                    <p>Detailed breakdown of your current positions.</p>
+                </div>
+                <div class="table-card">
+                    <table id="holdingsTable">
+                        <thead>
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-key="symbol">Symbol</th>
+                                    <th class="text-right sortable" data-key="quantity">Shares</th>
+                                    <th class="text-right sortable" data-key="avgPrice">Avg Buy Price</th>
+                                    <th class="text-right sortable" data-key="costBasis">Total Invested</th>
+                                    <th class="text-right sortable" data-key="currentPrice">Current Price</th>
+                                    <th class="text-right sortable" data-key="currentValue">Current Value</th>
+                                    <th class="text-right sortable" data-key="return">Return</th>
+                                </tr>
+                            </thead>
+                        </thead>
+                        <tbody>
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Activity Heatmap / Deposits -->
+            <section class="charts-row">
+                <div class="chart-card full-width">
+                    <h3>Cumulative Net Deposits</h3>
+                    <canvas id="depositsChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Benchmark Comparison -->
+            <section class="full-width-section">
+                <div class="section-header">
+                    <h2>Benchmark Comparison</h2>
+                    <p>What if you had just bought the S&P 500?</p>
+                </div>
+
+                <div class="chart-card full-width">
+                    <div class="control-group" style="margin-bottom: 1.5rem;">
+                        <input type="text" id="benchmarkInput" value="SPY" class="api-input"
+                            style="width: 100px; text-transform: uppercase;">
+                        <button id="runSimulationBtn" class="action-btn">Simulate</button>
+                    </div>
+
+                    <div id="simulationResults" class="metrics-grid hidden" style="margin-bottom: 2rem;">
+                        <div class="metric-card">
+                            <h3>Actual Portfolio Value</h3>
+                            <div class="metric-value" id="simActualValue">--</div>
+                            <div class="metric-sub" id="simActualReturn">--</div>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Benchmark (<span id="simTickerLabel">SPY</span>) Value</h3>
+                            <div class="metric-value" id="simBenchmarkValue">--</div>
+                            <div class="metric-sub" id="simBenchmarkReturn">--</div>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Difference</h3>
+                            <div class="metric-value" id="simDifference">--</div>
+                        </div>
+                    </div>
+
+                    <canvas id="benchmarkChart"></canvas>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state">
+            <h2>Welcome!</h2>
+            <p>Upload your Robinhood CSV export to generate your dashboard.</p>
+            <p class="small-hint">Data is processed locally in your browser. No data is sent to any server.</p>
+        </div>
+
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
